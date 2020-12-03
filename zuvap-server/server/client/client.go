@@ -17,7 +17,6 @@ var (
 func main() {
 
 	fmt.Println("Client ZuvapPagos")
-
 	//	cc, err := grpc.Dial("134.209.65.78:50051", grpc.WithInsecure())
 	cc, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
 	if err != nil {
