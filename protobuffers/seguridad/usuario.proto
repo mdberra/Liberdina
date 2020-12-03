@@ -1,0 +1,35 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+package seguridad;
+option go_package="seguridad/usuariopb";
+
+message Usuario {
+    string  name = 1;
+    string  last_name = 2;
+    string  phone = 3;
+    bool    facebook = 4;
+    bool    google = 5;
+    int32   gender = 6;
+    string  email = 7;
+    google.protobuf.Timestamp email_verified_at = 8;
+    string  password = 9;
+    google.protobuf.Timestamp deleted_at = 10;
+    string  remember_token = 11;
+    google.protobuf.Timestamp created_at = 12;
+    google.protobuf.Timestamp updated_at = 13;
+    int32   referred_id = 14;
+    string  photo = 15;
+  }
+  
+  message UsuarioRequest { 
+    Usuario usuario = 1;
+  }
+  
+  message UsuarioResponse {
+    Usuario usuario = 1;
+  }
+  
+  service UsuarioService { 
+    rpc Get(UsuarioRequest) returns (UsuarioResponse); 
+  }

@@ -1,0 +1,39 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+package zuvap;
+option go_package="zuvap/pagopb";
+
+message Pago {
+    int32   idUsuario = 1;     // Id usuario zuvap
+    string  description = 2;    // Viaje o  Envio paquete
+// Pay
+    string  paymentType = 3;    // Tipo de medio de pago a utilizar. (TC / TD)
+    string  cardNumber = 4;     //Numero de tarjeta  sin espacios
+    int32   cardExpirationDateMonth = 5;// Mes de expiración de la tarjeta a utilizar
+    int32   cardExpirationDateYear = 6; // Año de expiración de la tarjeta a utilizar
+    int32   cardSecurityCode = 7;       // Código de seguridad de la tarjeta a utilizar
+    string  cardHolderName = 8;         // Nombre completo que figura en la tarjeta a utilizar
+    string  currency = 9;               // sin viene vacio asumimos ARS
+    double  amount = 10;                // importe
+// Output
+    google.protobuf.Timestamp datetimeProcess = 11; // fecha hora de procesamiento
+    string  paymentId = 12;            // el que nos vino en el CREATE
+    int32   installmentPlanDetailId = 13; // Id que vino en el GET
+    int32   errorCode = 14;
+    string  errorMessage = 15;
+    string  pagoId = 16;             // Indica el id con el cual se registro el pago realizado.
+    string  pagoDate = 17;           // Indica la fecha en la cual se registro el pago realizado.
+  }
+  
+  message PagoRequest { 
+    Pago pago = 1;
+  }
+  
+  message PagoResponse {
+    Pago pago = 1;
+  }
+  
+  service PagoService { 
+    rpc Pay(PagoRequest) returns (PagoResponse); 
+  }
