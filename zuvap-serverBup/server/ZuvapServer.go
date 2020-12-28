@@ -1,27 +1,26 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"net/http"
-	"time"
+	"net"
 
 	"github.com/Liberdina/protobuffers/zuvap/pagopb"
 	"github.com/Liberdina/zuvap-server/connect"
-	"github.com/Liberdina/zuvap-server/param"
+	"github.com/Liberdina/zuvap-server/server/param"
 	"github.com/Liberdina/zuvap-server/services"
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 	"github.com/subosito/gotenv"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var (
-	pago         pagopb.Pago
-	pagosService services.PagosService
-	parameters   param.Parameters
-	serverPago   *grpc.Server
-	conexion     connect.Conexion
+	pago       pagopb.Pago
+	callerRest services.CallerRest
+	parameters param.Parameters
+	serverPago *grpc.Server
+	conexion   connect.Conexion
 )
 
 func init() {
@@ -48,53 +47,17 @@ func main() {
 	}
 
 	fmt.Println("Connecting to Database")
-	conex, err := conexion.ConectToDB(parameters)
-	if err != nil {
+	if err := conexion.ConectToDB(parameters); err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	pagosService.SetParameters(parameters, conex)
-
-	router := mux.NewRouter()
-	router.StrictSlash(false) //permite que estas dos rutas sean iguales   /api/user y /api/user/
-
-	router.HandleFunc("/api/pagos", pagosService.Pagar).Methods("POST")
-	corsOpts := cors.New(
-		cors.Options{
-			AllowedOrigins: []string{"*"},
-			AllowedMethods: []string{
-				http.MethodGet,
-				http.MethodPost,
-				http.MethodPut,
-				http.MethodDelete,
-				//			http.MethodPatch,
-				//			http.MethodOptions,
-				http.MethodHead,
-			},
-			AllowedHeaders: []string{
-				"*", //or you can your header key values which you are using in your application
-			},
-		},
-	)
-	server := &http.Server{
-		Addr: ":5000",
-		//		Handler:        cors.Default().Handler(router),
-		Handler:        corsOpts.Handler(router),
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20, // 1Mb
-	}
-	log.Println("Escuchando en :5000")
-	server.ListenAndServe()
-}
-
-/*  PROTOCOL BUFFERS
+	/*  PROTOCOL BUFFERS */
 	fmt.Println("Opening PAGOS")
 	lis, err := net.Listen("tcp", parameters.IP+parameters.Port)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	pagosService.SetParameters(parameters)
+	callerRest.SetParameters(parameters)
 	serverPago = grpc.NewServer()
 	pagopb.RegisterPagoServiceServer(serverPago, &server{})
 
@@ -106,6 +69,7 @@ func main() {
 	if err := serverPago.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
 }
 
 type server struct{}
@@ -122,7 +86,7 @@ func (s *server) realizarPago(req *pagopb.PagoRequest) (*pagopb.PagoResponse, er
 		fmt.Printf("NO se esta logueando en DB INSERT: %v, ERROR %v", req, err)
 	}
 
-	pagoResponse, err := pagosService.DoCaller(req)
+	pagoResponse, err := callerRest.DoCaller(req)
 
 	err = conexion.LoguearUpdate(idPago, pagoResponse)
 	if err != nil {
@@ -130,4 +94,3 @@ func (s *server) realizarPago(req *pagopb.PagoRequest) (*pagopb.PagoResponse, er
 	}
 	return pagoResponse, err
 }
-*/

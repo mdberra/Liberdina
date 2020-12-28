@@ -1,20 +1,23 @@
 package services
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/Liberdina/protobuffers/zuvap/pagopb"
 	"github.com/Liberdina/zuvap-server/connect"
+	"github.com/Liberdina/zuvap-server/server/param"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 var (
-	//	conn connect.Conexion
-	rest              connect.Rest
+	conexion          connect.Conexion
 	pagoResponse      pagopb.PagoResponse
 	importeStr        string
 	expiracionMesStr  string
@@ -22,15 +25,13 @@ var (
 	securityCodeStr   string
 )
 
-type CallerRest struct{}
-
-func (c *CallerRest) Inicializar() {
-	rest.SetearAmbiente()
-}
-func (c *CallerRest) GetIP() string {
-	return rest.IP
+type CallerRest struct {
+	param param.Parameters
 }
 
+func (c *CallerRest) SetParameters(param *param.Parameters) {
+	c.param = *param
+}
 func (c *CallerRest) DoCaller(req *pagopb.PagoRequest) (*pagopb.PagoResponse, error) {
 	pagoResponse.Pago = req.GetPago()
 	importeStr = fmt.Sprintf("%.2f", req.GetPago().GetAmount())
@@ -49,6 +50,9 @@ func (c *CallerRest) DoCaller(req *pagopb.PagoRequest) (*pagopb.PagoResponse, er
 	}
 
 	return &pagoResponse, nil
+}
+func (c *CallerRest) DbInsert() {
+	//	db.Database.Exec("CALL mydatabase.mystoredprocedure($1, $2)", param1, param2)
 }
 
 type CreateBody struct {
@@ -91,7 +95,7 @@ func (c *CallerRest) doCreate(req *pagopb.PagoRequest) error {
 	cb.Description = req.GetPago().GetDescription()
 	cb.ItemList = cil
 	cb.TotalAmount = req.GetPago().GetAmount()
-	cb.Token = rest.Token
+	cb.Token = c.param.Token
 	cb.OperationId = usuarioStr
 
 	requestBody, err := json.Marshal(cb)
@@ -104,7 +108,7 @@ func (c *CallerRest) doCreate(req *pagopb.PagoRequest) error {
 	}
 	//	fmt.Println(string(requestBody))
 	//--------------------------------------------------------------------------
-	create, err := rest.DoRest("POST", rest.URLPostCreate, requestBody)
+	create, err := c.DoRest("POST", c.param.URLPostCreate, requestBody)
 	if err != nil {
 		//		log.Printf("Error al hacer Post Create %v", requestBody)
 		return status.Errorf(
@@ -160,7 +164,7 @@ func (c *CallerRest) doPlanDetail(req *pagopb.PagoRequest) error {
 	//	?cardNumber=427602&amount=1000
 	result := "?cardNumber=" + req.GetPago().GetCardNumber()[0:6] + "&amount=" + importeStr
 
-	httpget, err := rest.DoRest("GET", rest.URLGetPlanDetails+result, nil)
+	httpget, err := c.DoRest("GET", c.param.URLGetPlanDetails+result, nil)
 	if err != nil {
 		//		log.Printf("Error al hacer Get PlanDetail %v", result)
 		return status.Errorf(
@@ -249,7 +253,7 @@ func (c *CallerRest) doPay(req *pagopb.PagoRequest) error {
 	}
 	//	fmt.Println(string(requestBody))
 	//--------------------------------------------------------------------------
-	pay, err := rest.DoRest("POST", rest.URLPostPay, requestBody)
+	pay, err := c.DoRest("POST", c.param.URLPostPay, requestBody)
 	if err != nil {
 		//		log.Printf("Error al hacer Post Pay %v", requestBody)
 		return status.Errorf(
@@ -281,4 +285,32 @@ func (c *CallerRest) doPay(req *pagopb.PagoRequest) error {
 	pagoResponse.Pago.PagoId = fmt.Sprint(pr.Id)
 	pagoResponse.Pago.PagoDate = pr.Date
 	return nil
+}
+
+//-----------------------------------------------------------------------------------------
+func (*CallerRest) DoRest(method string, url string, requestBody []byte) ([]byte, error) {
+	timeout := time.Duration(30 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+	request, err := http.NewRequest(method, url, bytes.NewBuffer(requestBody))
+	request.Header.Set("Content-type", "application/json")
+	if err != nil {
+		log.Printf("Error al hacer el http.NewRequest %v", err)
+		return nil, err
+	}
+
+	resp, err := client.Do(request)
+	if err != nil {
+		log.Printf("Error al hacer el Request %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error al hacer el ioutil.ReadAll %v", err)
+		return nil, err
+	}
+	return body, nil
 }

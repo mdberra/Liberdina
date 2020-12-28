@@ -9,7 +9,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/Liberdina/protobuffers/zuvap/pagopb"
-	"github.com/Liberdina/zuvap-server/param"
+	"github.com/Liberdina/zuvap-server/server/param"
 )
 
 // MySQL               PostgreSQL            Oracle
@@ -27,23 +27,23 @@ type Conexion struct {
 	DataSourceName string
 }
 
-func (c *Conexion) ConectToDB(param *param.Parameters) (*Conexion, error) {
+func (c *Conexion) ConectToDB(param *param.Parameters) error {
 	c.param = *param
 	err = nil
 	log.Println("Conectando a la DB...")
 
 	if err = c.Open(); err != nil {
 		log.Println("error Open")
-		return nil, err
+		return err
 	}
 	err = c.Db.Ping()
 	if err != nil {
 		log.Println("No se pudo conectar")
 		log.Println(err)
-		return nil, err
+		return err
 	}
 	log.Println("Conexion exitosa")
-	return c, err
+	return err
 }
 
 // conectar a la DB

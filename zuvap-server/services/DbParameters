@@ -1,0 +1,28 @@
+STORE PROCEDURE INSERT PARAMETERS
+---------------------------------
+int64  ID  // propio de la tabla a devolver
+string CLIENTE // ZUVAP, a futuro otros clientes
+//
+google.protobuf.Timestamp datetimePeticion  // FechaHora de la Peticion de la App
+int32   idUsuario                           // Id usuario zuvap
+string  description                         // Viaje o  Envio paquete
+//
+// Pay
+string  paymentType             // Tipo de medio de pago a utilizar. (TC / TD)
+string  last4cardNumber         // Ultimos 4 nros de la tarjeta
+string  cardHolderName          // Nombre completo que figura en la tarjeta a utilizar
+//
+// Importe
+string  currency                // sin viene vacio asumimos ARS
+double  amount                  // importe
+
+
+STORE PROCEDURE UPDATE PARAMETERS
+---------------------------------
+google.protobuf.Timestamp datetimeProcess // fecha hora de procesamiento
+string  paymentId                         // MIIII el que nos vino en el CREATE
+int32   installmentPlanDetailId           // MIIII Id que vino en el GET
+int32   errorCode
+string  errorMessage
+string  pagoId                            // MIIII Indica el id con el cual se registro el pago realizado
+string  pagoDate                          // MIIII Indica la fecha en la cual se registro el pago realizado
